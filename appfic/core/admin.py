@@ -1,7 +1,14 @@
-from .models import EvaluatorProfile
+
+from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin
 from django.contrib import admin
 from .models import (
     Axis,
+    CriterionCategory,
+    EducationalLevel,
+    EvaluatorProfile,
+    Grade,
+    School,
     SystemConfig,
     Project,
     Criterion,
@@ -20,11 +27,21 @@ class AxisAdmin(admin.ModelAdmin):
 class SystemConfigAdmin(admin.ModelAdmin):
     list_display = ('id', 'start_date', 'end_date')
 
+@admin.register(CriterionCategory)
+class CriterionCategoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
 
-@admin.register(EvaluatorProfile)
-class EvaluatorProfileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'axis')
-    list_filter = ('axis',)
+@admin.register(School)
+class SchoolAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+
+@admin.register(Grade)
+class GradeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+
+@admin.register(EducationalLevel)
+class EducationalLevelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
 
 
 @admin.register(Project)
@@ -32,13 +49,18 @@ class ProjectAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'student_name', 'school', 'grade', 'axis')
     list_filter = ('axis',)
     search_fields = ('title', 'student_name', 'school')
-
-
+    
 @admin.register(Criterion)
 class CriterionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'category', 'is_highlight')
+    list_display = ('id', 'name', 'category', 'description', 'is_highlight')
     list_filter = ('category', 'is_highlight')
-
+    search_fields = ('name', 'description')   
+       
+@admin.register(EvaluatorProfile)
+class EvaluatorProfileAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'axis')
+    list_filter = ('axis',)
+    
 
 @admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
@@ -58,9 +80,6 @@ class ScoreAdmin(admin.ModelAdmin):
     list_display = ('id', 'evaluation', 'criterion', 'score')
     list_filter = ('criterion',)
     
-from django.contrib.auth.models import User
-from django.contrib.auth.admin import UserAdmin
-
 
 class EvaluatorProfileInline(admin.StackedInline):
     model = EvaluatorProfile

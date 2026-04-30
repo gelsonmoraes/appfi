@@ -7,12 +7,11 @@ from django.contrib.auth.models import User
 # ---------------------------
 
 class Axis(models.Model):
-    name = models.CharField(max_length=150)
+    name = models.CharField(max_length=150, unique=True)
 
     def __str__(self):
         return self.name
-
-
+    
 class SystemConfig(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
@@ -20,6 +19,29 @@ class SystemConfig(models.Model):
     def __str__(self):
         return f"Config {self.id}"
 
+class CriterionCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+    
+class School(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+    
+class Grade(models.Model):
+    name = models.CharField(max_length=3, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class EducationalLevel(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
 
 # ---------------------------
 # MAIN ENTITIES
@@ -28,9 +50,23 @@ class SystemConfig(models.Model):
 class Project(models.Model):
     title = models.CharField(max_length=255)
     student_name = models.CharField(max_length=255)
-    school = models.CharField(max_length=255)
-    grade = models.CharField(max_length=50)
-    axis = models.ForeignKey(Axis, on_delete=models.PROTECT)
+    school = models.ForeignKey(
+        School, on_delete=models.CASCADE, 
+        null=True, 
+        blank=True
+    )    
+    grade = models.ForeignKey(
+        Grade, on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    educational_level = models.ForeignKey(
+        EducationalLevel,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    axis = models.ForeignKey(Axis, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -47,7 +83,11 @@ class Criterion(models.Model):
     ]
 
     name = models.CharField(max_length=255)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    description = models.TextField(blank=True)
+    category = models.ForeignKey(
+        CriterionCategory,
+        on_delete=models.CASCADE
+    )
     is_highlight = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -56,7 +96,7 @@ class Criterion(models.Model):
 
 class EvaluatorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    axis = models.ForeignKey(Axis, on_delete=models.PROTECT)
+    axis = models.ForeignKey(Axis, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.user} - {self.axis}"
