@@ -1,7 +1,9 @@
+from django.utils import timezone
+from django.db.models import Avg
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 # ---------------------------
 # SUPPORT TABLES
@@ -175,7 +177,9 @@ class Assignment(models.Model):
 # ---------------------------
 
 class Evaluation(models.Model):
-
+    from django.db.models import Avg
+    from django.utils import timezone
+    
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('in_progress', 'In Progress'),
@@ -216,6 +220,34 @@ class Evaluation(models.Model):
 
     def __str__(self):
         return f"Evaluation {self.id}"
+    
+    def calculate_final_score(self):
+
+        average = self.score_set.aggregate(
+            Avg('score')
+        )['score__avg']
+
+        self.final_score = average or 0
+
+        super().save(update_fields=['final_score'])
+
+
+    def finalize(self):
+
+        total_criteria = Criterion.objects.count()
+
+        total_scores = self.score_set.count()
+
+        if total_scores < total_criteria:
+            raise ValidationError(
+                'A avaliação não pode ser finalizada incompleta.'
+            )
+
+        self.status = 'completed'
+        self.is_finalized = True
+        self.finalized_at = timezone.now()
+
+        self.save()
 
 
 # ---------------------------
@@ -223,10 +255,27 @@ class Evaluation(models.Model):
 # ---------------------------
 
 class Score(models.Model):
-    evaluation = models.ForeignKey(Evaluation, on_delete=models.CASCADE)
-    criterion = models.ForeignKey(Criterion, on_delete=models.CASCADE)
+    
 
-    score = models.IntegerField()
+    evaluation = models.ForeignKey(
+        Evaluation,
+        on_delete=models.CASCADE
+    )
+
+    criterion = models.ForeignKey(
+        Criterion,
+        on_delete=models.CASCADE
+    )
+
+    score = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(10)
+        ]
+    )
+
     comment = models.TextField(blank=True)
 
     class Meta:
@@ -237,6 +286,11 @@ class Score(models.Model):
             )
         ]
 
+    def save(self, *args, **kwargs):
+
+        super().save(*args, **kwargs)
+
+        self.evaluation.calculate_final_score()
+
     def __str__(self):
         return f"{self.evaluation} - {self.criterion}"
-    
