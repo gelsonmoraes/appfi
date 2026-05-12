@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 
 # ---------------------------
@@ -97,7 +98,8 @@ class Criterion(models.Model):
 class EvaluatorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     axis = models.ForeignKey(Axis, on_delete=models.CASCADE)
-
+    max_projects = models.IntegerField(default=100)
+    
     def __str__(self):
         return f"{self.user} - {self.axis}"
 
@@ -106,9 +108,19 @@ class EvaluatorProfile(models.Model):
 # ---------------------------
 
 class Assignment(models.Model):
-    evaluator = models.ForeignKey(User, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
+    evaluator = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    project = models.ForeignKey(
+        'Project',
+        on_delete=models.CASCADE
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
     class Meta:
         constraints = [
@@ -118,9 +130,45 @@ class Assignment(models.Model):
             )
         ]
 
+    def clean(self):
+
+        # Impede mais de 7 avaliadores no projeto
+        project_assignments = Assignment.objects.filter(
+            project=self.project
+        ).exclude(id=self.id).count()
+
+        if project_assignments >= 7:
+            raise ValidationError(
+                'Este projeto já possui o número máximo de avaliadores.'
+            )
+
+        # Impede avaliador de ultrapassar o limite máximo
+        evaluator_assignments = Assignment.objects.filter(
+            evaluator=self.evaluator
+        ).exclude(id=self.id).count()
+
+        max_projects = self.evaluator.evaluatorprofile.max_projects
+
+        if evaluator_assignments >= max_projects:
+            raise ValidationError(
+                'Este avaliador já atingiu o limite máximo de projetos.'
+            )
+
+        # Impede avaliador de avaliar projeto de outro eixo
+        evaluator_axis = self.evaluator.evaluatorprofile.axis
+        project_axis = self.project.axis
+
+        if evaluator_axis != project_axis:
+            raise ValidationError(
+                'O avaliador só pode avaliar projetos do próprio eixo.'
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.evaluator} - {self.project}"
-
 
 # ---------------------------
 # EVALUATION

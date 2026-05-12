@@ -2,6 +2,7 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import admin
+from core.services.distribution_service import distribute_projects
 from .models import (
     Axis,
     CriterionCategory,
@@ -17,7 +18,17 @@ from .models import (
     Score
 )
 
+@admin.action(description='Distribuir avaliadores automaticamente')
+def distribute_evaluators(modeladmin, request, queryset):
 
+    distribute_projects()
+
+    modeladmin.message_user(
+        request,
+        'Distribuição realizada com sucesso.'
+    )
+    
+    
 @admin.register(Axis)
 class AxisAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
@@ -49,13 +60,14 @@ class ProjectAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'student_name', 'school', 'grade', 'axis')
     list_filter = ('axis',)
     search_fields = ('title', 'student_name', 'school')
+    actions = [distribute_evaluators]
     
 @admin.register(Criterion)
 class CriterionAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'category', 'description', 'is_highlight')
     list_filter = ('category', 'is_highlight')
     search_fields = ('name', 'description')   
-       
+
 @admin.register(EvaluatorProfile)
 class EvaluatorProfileAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'axis')
